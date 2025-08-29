@@ -1,7 +1,7 @@
 # 📄 MeshPDF - A Simple Easy To Use PDF Editor
 
 A powerful yet simple PDF editor that lets you add signatures, text annotations, and combine multiple PDFs with ease.
-<img width="899" height="422" alt="image" src="https://github.com/user-attachments/assets/bcebe7b4-e97f-4fca-b93b-2a5a9e7c78bf" />
+<img width="1781" height="828" alt="image" src="https://github.com/user-attachments/assets/6255d65b-d705-4c15-ad17-e5d2bea61af2" />
 
 ## ✨ Features
 
