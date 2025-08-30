@@ -1,0 +1,9 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Claude configs
+.claude/
+
+# Build output
+build/
