@@ -342,8 +342,43 @@ class MeshPDFApp(QMainWindow):
                     pass
         self.temp_files.clear()
     
+    def has_unsaved_changes(self):
+        """Check if there are unsaved modifications"""
+        if not self.pdf_viewer.page_labels:
+            return False
+            
+        for page_label in self.pdf_viewer.page_labels:
+            for child in page_label.children():
+                if isinstance(child, DraggableLabel) and hasattr(child, 'modification_info'):
+                    return True
+        return False
+    
     def closeEvent(self, event):
-        """Clean up temporary files on close"""
+        """Handle application close with unsaved changes check"""
+        if self.has_unsaved_changes():
+            reply = QMessageBox.question(
+                self, 
+                "Unsaved Changes", 
+                "You have unsaved changes. Do you want to save your work before closing?",
+                QMessageBox.StandardButton.Save | 
+                QMessageBox.StandardButton.Discard | 
+                QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save
+            )
+            
+            if reply == QMessageBox.StandardButton.Save:
+                # Try to save the document
+                self.save_pdf()
+                # If save was successful or cancelled, check if we should still close
+                # Note: save_pdf doesn't return success status, so we assume user completed save
+                
+            elif reply == QMessageBox.StandardButton.Cancel:
+                # User cancelled, don't close
+                event.ignore()
+                return
+            # If Discard was selected, continue with closing
+        
+        # Clean up temporary files and close
         self.cleanup_temp_files()
         super().closeEvent(event)
 
