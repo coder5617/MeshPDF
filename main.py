@@ -124,7 +124,7 @@ class MeshPDFApp(QMainWindow):
                 self.current_file = file_path
                 # Pass scale factor to editor
                 self.pdf_editor.set_current_pdf(file_path, scale_factor=self.pdf_viewer.scale_factor)
-                self.pdf_viewer.load_pdf(file_path)
+                self.pdf_viewer.load_pdf(file_path, preserve_overlays=False)  # No overlays to preserve on initial load
                 
                 # Enable buttons after successful load
                 self.enable_editing_buttons(True)
@@ -298,7 +298,7 @@ class MeshPDFApp(QMainWindow):
                 self.current_file = merged_path
                 self.temp_files.append(merged_path)  # Track temp file
                 self.pdf_editor.set_current_pdf(merged_path, scale_factor=self.pdf_viewer.scale_factor)
-                self.pdf_viewer.load_pdf(merged_path)
+                self.pdf_viewer.load_pdf(merged_path, preserve_overlays=False)  # No overlays to preserve for merged PDF
                 
                 # Enable buttons
                 self.enable_editing_buttons(True)

@@ -67,6 +67,8 @@ class DraggableLabel(QLabel):
                     sig_pad = SignaturePad(self.window())
                     if sig_pad.exec():
                         new_sig = sig_pad.get_signature()
+                        # Store the original pixmap
+                        self.original_pixmap = new_sig
                         # Scale to current size
                         scaled_sig = new_sig.scaled(
                             self.size(), 
@@ -141,16 +143,126 @@ class PDFViewer(QScrollArea):
         self.current_signature = None
         self.scale_factor = 2  # PDF rendering scale (200% for better quality)
         self.zoom_level = 1.0  # Current zoom level
+        self.overlays = []  # Store overlay information for persistence across zoom
         
         # Set scrollbar policies for better navigation
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+    
+    def collect_overlays(self):
+        """Collect all overlay information before clearing pages"""
+        overlays = []
+        for page_num, page_label in enumerate(self.page_labels):
+            for child in page_label.children():
+                if isinstance(child, DraggableLabel) and hasattr(child, 'modification_info'):
+                    mod_info = child.modification_info
+                    overlay_data = {
+                        'type': mod_info['type'],
+                        'page': page_num,
+                        'position': child.pos(),
+                        'size': child.size(),
+                        'original_zoom': mod_info.get('original_zoom', self.zoom_level)  # Use stored original zoom
+                    }
+                    
+                    if mod_info['type'] == 'signature':
+                        # Store the original signature pixmap if available, otherwise use current
+                        overlay_data['pixmap'] = getattr(child, 'original_pixmap', child.pixmap())
+                    elif mod_info['type'] == 'text':
+                        overlay_data['text'] = child.text()
+                        overlay_data['font_size'] = child.font().pointSize()
+                    
+                    overlays.append(overlay_data)
+                    print(f"Collected {mod_info['type']} overlay from page {page_num}")
         
-    def load_pdf(self, file_path):
+        return overlays
+    
+    def restore_overlays(self, overlays):
+        """Restore overlays after page recreation with proper scaling"""
+        for overlay in overlays:
+            page_num = overlay['page']
+            if page_num >= len(self.page_labels):
+                continue  # Skip if page doesn't exist
+                
+            page_label = self.page_labels[page_num]
+            
+            # Calculate position and size scaling
+            zoom_ratio = self.zoom_level / overlay['original_zoom']
+            scaled_pos = QPoint(
+                int(overlay['position'].x() * zoom_ratio),
+                int(overlay['position'].y() * zoom_ratio)
+            )
+            
+            if overlay['type'] == 'signature':
+                # Create signature overlay
+                sig_label = DraggableLabel(page_label)
+                
+                # Always scale from the original pixmap to prevent quality degradation
+                original_pixmap = overlay['pixmap']
+                
+                # Calculate target size based on current zoom
+                base_width = int(200 * self.zoom_level)
+                base_height = int(100 * self.zoom_level)
+                scaled_pixmap = original_pixmap.scaled(
+                    base_width, base_height,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                
+                sig_label.setPixmap(scaled_pixmap)
+                # Preserve the original pixmap for future scaling
+                sig_label.original_pixmap = original_pixmap
+                sig_label.move(scaled_pos)
+                sig_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+                sig_label.setStyleSheet("background: transparent;")
+                sig_label.show()
+                
+                sig_label.modification_info = {
+                    'type': 'signature',
+                    'page': page_num,
+                    'original_zoom': self.zoom_level  # Update to current zoom after restoration
+                }
+                
+            elif overlay['type'] == 'text':
+                # Create text overlay
+                text_label = DraggableLabel(page_label)
+                text_label.setText(overlay['text'])
+                
+                # Scale font size appropriately
+                font = QFont()
+                scaled_font_size = int(overlay['font_size'] * zoom_ratio)
+                font.setPointSize(max(8, scaled_font_size))  # Minimum font size
+                text_label.setFont(font)
+                
+                text_label.setStyleSheet("""
+                    color: black; 
+                    background-color: rgba(255, 255, 255, 200);
+                    padding: 2px;
+                    border: 1px solid rgba(0, 0, 0, 50);
+                """)
+                
+                text_label.adjustSize()
+                text_label.move(scaled_pos)
+                text_label.show()
+                
+                text_label.modification_info = {
+                    'type': 'text',
+                    'page': page_num,
+                    'original_zoom': self.zoom_level  # Update to current zoom after restoration
+                }
+            
+            print(f"Restored {overlay['type']} overlay on page {page_num} at zoom {self.zoom_level:.2f}")
+        
+    def load_pdf(self, file_path, preserve_overlays=True):
         """Load and display a PDF file"""
         try:
             # Store current file path
             self.current_file = file_path
+            
+            # Collect existing overlays before clearing if preserving
+            collected_overlays = []
+            if preserve_overlays and self.page_labels:
+                collected_overlays = self.collect_overlays()
+                print(f"Collected {len(collected_overlays)} overlays to preserve")
             
             # Clear existing pages
             self.clear_pages()
@@ -197,6 +309,11 @@ class PDFViewer(QScrollArea):
                     self.layout.addWidget(spacer)
                     
             print(f"Successfully loaded {len(self.pages)} pages at zoom {self.zoom_level:.2f}")
+            
+            # Restore overlays if any were collected
+            if collected_overlays:
+                self.restore_overlays(collected_overlays)
+                print(f"Restored {len(collected_overlays)} overlays")
             
         except Exception as e:
             self.clear_pages()
@@ -307,6 +424,8 @@ class PDFViewer(QScrollArea):
             )
             
             sig_label.setPixmap(scaled_signature)
+            # Store the original unscaled signature for quality preservation
+            sig_label.original_pixmap = self.current_signature
             
             # Position signature centered on click point
             sig_label.move(pos.x() - scaled_signature.width() // 2, 
@@ -320,7 +439,8 @@ class PDFViewer(QScrollArea):
             # Store modification info
             sig_label.modification_info = {
                 'type': 'signature',
-                'page': page_num
+                'page': page_num,
+                'original_zoom': self.zoom_level
             }
             
             print(f"Added signature to page {page_num} at position ({pos.x()}, {pos.y()})")
@@ -363,7 +483,8 @@ class PDFViewer(QScrollArea):
                 # Store modification info
                 text_label.modification_info = {
                     'type': 'text',
-                    'page': page_num
+                    'page': page_num,
+                    'original_zoom': self.zoom_level
                 }
                 
                 print(f"Added text to page {page_num} at position ({pos.x()}, {pos.y()})")
