@@ -86,6 +86,7 @@ pip install PyQt6 PyMuPDF Pillow numpy
 
 ## 🚀 Running the Application
 
+### Option 1: Run from Source
 ```bash
 python main.py
 ```
@@ -95,6 +96,65 @@ Or if you're using the virtual environment:
 # Make sure venv is activated first
 python main.py
 ```
+
+### Option 2: Build and Run Executable
+For Windows users who want a standalone executable:
+
+```bash
+# Run the build script
+build_exe.bat
+```
+
+Or using PowerShell:
+```powershell
+.\build_exe.ps1
+```
+
+This will create `dist\MeshPDF.exe` that you can run without Python installed.
+
+## 🔧 Building Windows Executable
+
+The project includes build scripts to create a standalone Windows executable using PyInstaller.
+
+### Prerequisites for Building
+- Windows 10/11
+- Python 3.8+
+- All project dependencies (automatically installed by build script)
+
+### Build Process
+1. **Run build script**:
+   ```bash
+   build_exe.bat
+   ```
+   Or PowerShell:
+   ```powershell
+   .\build_exe.ps1
+   ```
+
+2. **What the script does**:
+   - Creates/activates virtual environment
+   - Installs all dependencies including PyInstaller
+   - Cleans previous builds
+   - Builds executable using custom spec file
+   - Creates `dist\MeshPDF.exe`
+
+3. **Distribution**:
+   - The `dist` folder contains everything needed
+   - `MeshPDF.exe` is a standalone application
+   - No Python installation required on target machines
+   - Includes all dependencies bundled
+
+### Build Files
+- `MeshPDF.spec` - PyInstaller specification file
+- `build_exe.bat` - Windows batch build script
+- `build_exe.ps1` - PowerShell build script
+- `requirements.txt` - Updated with PyInstaller dependency
+
+### Troubleshooting Build Issues
+- **"python not found"**: Install Python and add to PATH
+- **"Permission denied"**: Run as administrator or check antivirus
+- **Missing dependencies**: The script will install them automatically
+- **Build fails**: Check console output for specific error messages
 
 ## 📖 How to Use
 
@@ -206,7 +266,7 @@ Feel free to fork and improve! Key areas for enhancement:
 - Create multi-page thumbnail view
 - Add keyboard shortcuts
 - Implement annotation layers
-- Wrapper to exe is needed
+- Wrapper to exe is available (see Building Executable section)
 
 ## 💡 Tips for Best Results
 - Draw signatures slowly for smoother lines

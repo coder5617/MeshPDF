@@ -56,7 +56,7 @@ class MeshPDFApp(QMainWindow):
         
         self.combine_btn = QPushButton("📑 Combine")
         self.combine_btn.setFixedHeight(35)
-        self.combine_btn.setToolTip("Combine multiple PDFs into one (files merged in selection order)")
+        self.combine_btn.setToolTip("Combine multiple PDFs into one - guided selection process")
         self.combine_btn.clicked.connect(self.combine_pdfs)
         
         self.zoom_in_btn = QPushButton("🔍+")
@@ -268,9 +268,29 @@ class MeshPDFApp(QMainWindow):
     
     def combine_pdfs(self):
         """Combine multiple PDFs into one"""
-        files, _ = QFileDialog.getOpenFileNames(
-            self, "Select PDFs to Combine", "", "PDF Files (*.pdf)"
-        )
+        # Show informative message box first
+        info_msg = QMessageBox()
+        info_msg.setIcon(QMessageBox.Icon.Information)
+        info_msg.setWindowTitle("Select Multiple PDFs")
+        info_msg.setText("You can select multiple PDF files in the next dialog.")
+        info_msg.setInformativeText("💡 Tips:\n• Hold Ctrl and click to select multiple files\n• Or use Ctrl+A to select all files\n• Files will be merged in the order you select them")
+        info_msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        
+        if info_msg.exec() != QMessageBox.StandardButton.Ok:
+            return
+        
+        # Use a custom dialog that shows selection tips
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle("Select PDFs to Combine (Hold Ctrl for multiple selection)")
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        dialog.setNameFilter("PDF Files (*.pdf)")
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, False)
+        
+        if dialog.exec():
+            files = dialog.selectedFiles()
+        else:
+            files = []
+            
         if not files:
             return
         

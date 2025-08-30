@@ -2,3 +2,4 @@ PyQt6
 PyMuPDF
 Pillow
 numpy
+PyInstaller
